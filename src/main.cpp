@@ -103,6 +103,10 @@ void init() {
     kernel->streams->printf("Smoothie Running @%ldMHz\r\n", SystemCoreClock / 1000000);
     SimpleShell::version_command("", kernel->streams);
 
+#ifdef THE_PUZZLER
+    kernel->streams->printf("Smoothie for The Puzzler edition\n");
+#endif
+
     bool sdok= (sd.disk_initialize() == 0);
     if(!sdok) kernel->streams->printf("SDCard failed to initialize\r\n");
 

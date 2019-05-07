@@ -29,6 +29,7 @@ StepperMotor::StepperMotor(Pin &step, Pin &dir, Pin &en) : step_pin(step), dir_p
     acceleration= NAN;
     selected= true;
     extruder= false;
+    slave_motor= nullptr;
 
     enable(false);
     unstep(); // initialize step pin
@@ -120,4 +121,22 @@ void StepperMotor::manual_step(bool dir)
 
     // keep track of actuators actual position in steps
     this->current_position_steps += (dir ? -1 : 1);
+}
+
+bool StepperMotor::enslave(StepperMotor *slave_motor)
+{
+    uint8_t slave_motor_id = slave_motor->get_motor_id();
+    if (this->motor_id == slave_motor_id)
+        return false;
+    if (slave_motor_id <= 2) // Do not mess with XYZ motors
+        return false;
+    this->slave_motor = slave_motor;
+    return true;
+}
+
+uint8_t StepperMotor::slave_id()
+{
+    if (this->slave_motor != nullptr)
+        return this->slave_motor->get_motor_id();
+    return 255;
 }

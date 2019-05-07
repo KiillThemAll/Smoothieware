@@ -64,7 +64,6 @@
 #define  rostock_checksum                    CHECKSUM("rostock")
 #define  linear_delta_checksum               CHECKSUM("linear_delta")
 #define  rotary_delta_checksum               CHECKSUM("rotary_delta")
-#define  delta_checksum                      CHECKSUM("delta")
 #define  hbot_checksum                       CHECKSUM("hbot")
 #define  corexy_checksum                     CHECKSUM("corexy")
 #define  corexz_checksum                     CHECKSUM("corexz")
@@ -85,6 +84,9 @@
 #define  alpha_checksum                      CHECKSUM("alpha")
 #define  beta_checksum                       CHECKSUM("beta")
 #define  gamma_checksum                      CHECKSUM("gamma")
+#define  delta_checksum                      CHECKSUM("delta")
+#define  epsilon_checksum                    CHECKSUM("epsilon")
+#define  zeta_checksum                       CHECKSUM("zeta")
 
 #define laser_module_default_power_checksum     CHECKSUM("laser_module_default_power")
 
@@ -139,7 +141,8 @@ void Robot::on_module_loaded()
     CHECKSUM(X "_en_pin"),          \
     CHECKSUM(X "_steps_per_mm"),    \
     CHECKSUM(X "_max_rate"),        \
-    CHECKSUM(X "_acceleration")     \
+    CHECKSUM(X "_acceleration"),     \
+    CHECKSUM(X "_enslave")          \
 }
 
 void Robot::load_config()
@@ -206,7 +209,7 @@ void Robot::load_config()
     this->s_value             = THEKERNEL->config->value(laser_module_default_power_checksum)->by_default(0.8F)->as_number();
 
      // Make our Primary XYZ StepperMotors, and potentially A B C
-    uint16_t const motor_checksums[][6] = {
+    uint16_t const motor_checksums[][7] = {
         ACTUATOR_CHECKSUMS("alpha"), // X
         ACTUATOR_CHECKSUMS("beta"),  // Y
         ACTUATOR_CHECKSUMS("gamma"), // Z
@@ -225,6 +228,7 @@ void Robot::load_config()
     this->default_acceleration= THEKERNEL->config->value(acceleration_checksum)->by_default(100.0F )->as_number(); // Acceleration is in mm/s^2
 
     // make each motor
+    StepperMotor* registered_motors[k_max_actuators];
     for (size_t a = 0; a < MAX_ROBOT_ACTUATORS; a++) {
         Pin pins[3]; //step, dir, enable
         for (size_t i = 0; i < 3; i++) {
@@ -248,10 +252,31 @@ void Robot::load_config()
             THEKERNEL->streams->printf("FATAL: motor %d does not match index %d\n", n, a);
             return;
         }
+        registered_motors[a] = sm;
 
         actuators[a]->change_steps_per_mm(THEKERNEL->config->value(motor_checksums[a][3])->by_default(a == 2 ? 2560.0F : 80.0F)->as_number());
         actuators[a]->set_max_rate(THEKERNEL->config->value(motor_checksums[a][4])->by_default(30000.0F)->as_number()/60.0F); // it is in mm/min and converted to mm/sec
         actuators[a]->set_acceleration(THEKERNEL->config->value(motor_checksums[a][5])->by_default(NAN)->as_number()); // mm/secs²
+    }
+
+    for (size_t a = 0; a < MAX_ROBOT_ACTUATORS; a++) {
+        int slave_motor_checksum = get_checksum(THEKERNEL->config->value(motor_checksums[a][6])->by_default("")->as_string());
+        uint8_t slave_motor_id = 255;
+        if (slave_motor_checksum == delta_checksum) {
+            slave_motor_id = 3;
+        } else if (slave_motor_checksum == epsilon_checksum) {
+            slave_motor_id = 4;
+        } else if (slave_motor_checksum == zeta_checksum) {
+            slave_motor_id = 5;
+        }
+
+        if (slave_motor_id != 255) {
+            if (registered_motors[a]->enslave(registered_motors[slave_motor_id])) {
+                    THEKERNEL->streams->printf("enslave motor %d by %d ok\n", slave_motor_id, a);
+            } else {
+                    THEKERNEL->streams->printf("enslave motor %d by %d FAIL\n", slave_motor_id, a);
+            }
+        }
     }
 
     check_max_actuator_speeds(); // check the configs are sane
@@ -301,8 +326,10 @@ uint8_t Robot::register_motor(StepperMotor *motor)
         THEKERNEL->streams->printf("FATAL: too many motors, increase k_max_actuators\n");
         __debugbreak();
     }
+    uint8_t motor_id = n_motors;
     actuators.push_back(motor);
-    motor->set_motor_id(n_motors);
+    motor->set_motor_id(motor_id);
+    THEKERNEL->streams->printf("register_motor n=%d ok\n", motor_id);
     return n_motors++;
 }
 
@@ -1242,6 +1269,9 @@ bool Robot::append_milestone(const float target[], float rate_mm_s)
     bool move= false;
     float sos= 0; // sum of squares for just primary axis (XYZ usually)
 
+    for (size_t i = 0; i < n_motors; i++) {
+        deltas[i] = 0;
+    }
     // find distance moved by each axis, use transformed target from the current compensated machine position
     for (size_t i = 0; i < n_motors; i++) {
         deltas[i] = transformed_target[i] - compensated_machine_position[i];

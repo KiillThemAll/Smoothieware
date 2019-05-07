@@ -19,13 +19,32 @@ class StepperMotor  : public Module {
         uint8_t get_motor_id() const { return motor_id; }
 
         // called from step ticker ISR
-        inline bool step() { step_pin.set(1); current_position_steps += (direction?-1:1); return moving; }
+        inline bool step() {
+            step_pin.set(1);
+            current_position_steps += (direction?-1:1);
+            if (slave_motor != nullptr)
+                slave_motor->step();
+            return moving;
+        }
         // called from unstep ISR
-        inline void unstep() { step_pin.set(0); }
+        inline void unstep() {
+            step_pin.set(0);
+            if (slave_motor != nullptr)
+                slave_motor->unstep();
+        }
         // called from step ticker ISR
-        inline void set_direction(bool f) { dir_pin.set(f); direction= f; }
+        inline void set_direction(bool f) {
+            dir_pin.set(f);
+            direction= f;
+            if (slave_motor != nullptr)
+                slave_motor->set_direction(f);
+        }
 
-        void enable(bool state) { en_pin.set(!state); };
+        void enable(bool state) {
+            en_pin.set(!state);
+            if (slave_motor != nullptr)
+                slave_motor->enable(state);
+        };
         bool is_enabled() const { return !en_pin.get(); };
         bool is_moving() const { return moving; };
         void start_moving() { moving= true; }
@@ -56,6 +75,9 @@ class StepperMotor  : public Module {
 
         int32_t steps_to_target(float);
 
+        uint8_t slave_id();
+        bool enslave(StepperMotor *slave_motor);
+
 
     private:
         void on_halt(void *argument);
@@ -73,6 +95,7 @@ class StepperMotor  : public Module {
         volatile int32_t current_position_steps;
         int32_t last_milestone_steps;
         float   last_milestone_mm;
+        StepperMotor *slave_motor;
 
         volatile struct {
             uint8_t motor_id:8;
