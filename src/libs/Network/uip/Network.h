@@ -8,6 +8,10 @@
 class Sftpd;
 class CommandQueue;
 
+#ifndef NORAY
+class Ray;
+#endif
+
 class Network : public Module
 {
 public:
@@ -23,6 +27,9 @@ public:
 
     // accessed from C
     Sftpd *sftpd;
+#ifndef NORAY
+    Ray *ray;
+#endif
     struct {
         bool webserver_enabled:1;
         bool telnet_enabled:1;
@@ -40,6 +47,9 @@ private:
     LPC17XX_Ethernet *ethernet;
 
     struct timer periodic_timer, arp_timer;
+#ifndef NORAY
+    struct timer ray_timer;
+#endif
     char *hostname;
     volatile uint32_t tickcnt;
     uint8_t mac_address[6];

@@ -555,6 +555,16 @@ uip_listen(u16_t port)
         }
     }
 }
+void
+uip_listen2(u16_t port)
+{
+    for (c = 0; c < UIP_LISTENPORTS; ++c) {
+        if (uip_listenports[c] == 0) {
+            uip_listenports[c] = port;
+            return;
+        }
+    }
+}
 /*---------------------------------------------------------------------------*/
 /* XXX: IP fragment reassembly: not well-tested. */
 

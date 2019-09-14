@@ -70,7 +70,7 @@ void dhcpc_configured(const struct dhcpc_state *s);
 #endif
 
 typedef struct dhcpc_state uip_udp_appstate_t;
-#define UIP_UDP_APPCALL dhcpc_appcall
+//#define UIP_UDP_APPCALL dhcpc_appcall
 
 
 #endif /* __DHCPC_H__ */

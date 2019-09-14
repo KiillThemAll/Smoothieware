@@ -109,6 +109,13 @@ else
 	endif
 endif
 
+ifneq "$(RAY)" "1"
+	DEFINES += -DNORAY
+	CPPSRCS2 = $(filter-out $(SRC)/libs/Network/uip/ray/%,$(CPPSRCS1))
+else
+	CPPSRCS2 = $(CPPSRCS1)
+endif
+
 # CNC build
 ifeq "$(CNC)" "1"
 	CPPSRCS21 = $(filter-out $(SRC)/modules/utils/panel/screens/3dprinter/%,$(CPPSRCS2))

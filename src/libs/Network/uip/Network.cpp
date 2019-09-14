@@ -28,6 +28,10 @@
 #include "plan9.h"
 #endif
 
+#ifndef NORAY
+#include "ray.h"
+#endif
+
 #include <mri.h>
 
 #define BUF ((struct uip_eth_hdr *)&uip_buf[0])
@@ -57,6 +61,9 @@ Network::Network()
     sftpd= NULL;
     hostname = NULL;
     plan9_enabled= false;
+#ifndef NORAY
+    ray = NULL;
+#endif
     command_q= CommandQueue::getInstance();
 }
 
@@ -242,6 +249,23 @@ void Network::on_idle(void *argument)
 
     } else {
 
+#ifndef NORAY
+      if (timer_expired(&ray_timer)) {
+          timer_reset(&ray_timer);
+
+          for (int i = 0; i < UIP_UDP_CONNS; i++) {
+              uip_udp_periodic(i);
+              /* If the above function invocation resulted in data that
+                 should be sent out on the network, the global variable
+                 uip_len is set to a value > 0. */
+              if (uip_len > 0) {
+                  uip_arp_out();
+                  tapdev_send(uip_buf, uip_len);
+              }
+          }
+      }
+#endif
+
         if (timer_expired(&periodic_timer)) { /* no packet but periodic_timer time out (0.1s)*/
             timer_reset(&periodic_timer);
 
@@ -256,7 +280,7 @@ void Network::on_idle(void *argument)
                 }
             }
 
-#if UIP_CONF_UDP
+#if UIP_CONF_UDP && NORAY
             for (int i = 0; i < UIP_UDP_CONNS; i++) {
                 uip_udp_periodic(i);
                 /* If the above function invocation resulted in data that
@@ -316,6 +340,28 @@ void Network::setup_servers()
 
     // sftpd service, which is lazily created on reciept of first packet
     uip_listen(HTONS(115));
+
+    // ray service
+#ifndef NORAY
+    printf("Ray init...");
+    uip_ipaddr_t addr;
+    struct uip_udp_conn *udp_rxonly; // receive from all ip's and source ports
+    struct uip_udp_conn *udp_txonly; // transmit to desired ip's
+    uip_ipaddr(&addr, 0, 0, 0, 0);
+    udp_rxonly = uip_udp_new(&addr, HTONS(0));
+    if (udp_rxonly != NULL) {
+        uip_udp_bind(udp_rxonly, HTONS(10777));
+
+        udp_txonly = uip_udp_new(&addr, HTONS(0));
+        if (udp_txonly != NULL) {
+            uip_udp_bind(udp_txonly, HTONS(10777));
+            printf("ok\n");
+
+            theNetwork->ray = new Ray();
+            theNetwork->ray->init(udp_rxonly, udp_txonly);
+        }
+    }
+#endif
 }
 
 extern "C" void dhcpc_configured(const struct dhcpc_state *s)
@@ -355,6 +401,10 @@ void Network::init(void)
     // two timers for tcp/ip
     timer_set(&periodic_timer, CLOCK_SECOND / 2); /* 0.5s */
     timer_set(&arp_timer, CLOCK_SECOND * 10);   /* 10s */
+
+#ifndef NORAY
+    timer_set(&ray_timer, CLOCK_SECOND / 50); // 20ms
+#endif
 
     // Initialize the uIP TCP/IP stack.
     uip_init();
@@ -402,7 +452,6 @@ extern "C" const char *get_query_string()
     return THEKERNEL->get_query_string().c_str();
 }
 
-// select between webserver and telnetd server
 extern "C" void app_select_appcall(void)
 {
     switch (uip_conn->lport) {
@@ -432,6 +481,29 @@ extern "C" void app_select_appcall(void)
         default:
             printf("unknown app for port: %d\n", uip_conn->lport);
 
+    }
+}
+
+extern "C" void app_select_udp_appcall(void) {
+    switch (uip_udp_conn->lport) {
+#ifndef NORAY
+        case HTONS(10777):
+            if(theNetwork->ray != NULL) {
+                theNetwork->ray->appcall();
+            }
+            break;
+#endif
+
+        case HTONS(67):
+            dhcpc_appcall();
+            break;
+
+        case HTONS(68):
+            dhcpc_appcall();
+            break;
+
+        default:
+            printf("unknown udp app for port: %d\n", uip_udp_conn->lport);
     }
 }
 

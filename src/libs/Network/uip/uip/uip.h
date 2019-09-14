@@ -787,7 +787,15 @@ void uip_send(const void *data, int len);
  * \return The uip_udp_conn structure for the new connection or NULL
  * if no connection could be allocated.
  */
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct uip_udp_conn *uip_udp_new(uip_ipaddr_t *ripaddr, u16_t rport);
+
+#ifdef __cplusplus
+}
+#endif
 
 /**
  * Removed a UDP connection.

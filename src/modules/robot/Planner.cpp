@@ -129,7 +129,7 @@ bool Planner::append_block( ActuatorCoordinates &actuator_pos, uint8_t n_motors,
     // axes might step for every step event. Travel per step event is then sqrt(travel_x^2+travel_y^2).
 
     // Compute maximum allowable entry speed at junction by centripetal acceleration approximation.
-    // Let a circle be tangent to both previous and current path line segments, where the junction
+    // Let a circle be tangent to both previous and current path lin e segments, where the junction
     // deviation is defined as the distance from the junction to the closest edge of the circle,
     // colinear with the circle center. The circular segment joining the two paths represents the
     // path of centripetal acceleration. Solve for max velocity based on max acceleration about the

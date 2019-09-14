@@ -76,6 +76,9 @@ export EXCLUDE_MODULES = tools/filamentdetector tools/scaracal tools/temperature
 else ifeq "$(THE_PUZZLER)" "1"
 DEFINES += -DMAX_ROBOT_ACTUATORS=6
 DEFINES += -DTHE_PUZZLER=1
+RAY = 1
+PLAN9 = 0
+export EXCLUDE_MODULES = tools/filamentdetector tools/scaracal tools/temperaturecontrol tools/temperatureswitch tools/extruder
 else
 # 3D build excludes these
 export EXCLUDE_MODULES = tools/drillingcycles tools/spindle
