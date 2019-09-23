@@ -112,8 +112,10 @@ endif
 ifneq "$(RAY)" "1"
 	DEFINES += -DNORAY
 	CPPSRCS2 = $(filter-out $(SRC)/libs/Network/uip/ray/%,$(CPPSRCS1))
+	CSRCS2 = $(filter-out $(SRC)/libs/yacoap/%,$(CSRCS1))
 else
 	CPPSRCS2 = $(CPPSRCS1)
+	CSRCS2 = $(CSRCS1)
 endif
 
 # CNC build

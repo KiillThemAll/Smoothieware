@@ -4,6 +4,9 @@
 //struct uip_udp_conn;
 #include <stdint.h>
 
+#include "coap.h"
+#include "coap_dump.h"
+
 class Ray {
 public:
     Ray();
@@ -13,6 +16,9 @@ public:
     void appcall();
 
 private:
+    void process_packet(uint8_t *buf, uint16_t size);
+    void send_response(uint16_t size);
+
     struct uip_udp_conn *m_udp_rxonly;
     struct uip_udp_conn *m_udp_txonly;
     bool m_notifications_enabled;
