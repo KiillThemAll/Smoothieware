@@ -18,6 +18,8 @@ using std::string;
 
 class StreamOutput;
 
+
+
 class Player : public Module {
     public:
         Player();
@@ -30,6 +32,10 @@ class Player : public Module {
         void on_set_public_data(void* argument);
         void on_gcode_received(void *argument);
         void on_halt(void *argument);
+
+        uint8_t state();
+        long file_size;
+        unsigned long played_cnt;
 
     private:
         void play_command( string parameters, StreamOutput* stream );
@@ -48,8 +54,6 @@ class Player : public Module {
         StreamOutput* reply_stream;
 
         FILE* current_file_handler;
-        long file_size;
-        unsigned long played_cnt;
         unsigned long elapsed_secs;
         float saved_position[3]; // only saves XYZ
         std::map<uint16_t, float> saved_temperatures;

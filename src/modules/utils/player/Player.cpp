@@ -366,6 +366,23 @@ void Player::progress_command( string parameters, StreamOutput *stream )
     }
 }
 
+uint8_t Player::state()
+{
+    string p = "-b";
+    string options = shift_parameter( p );
+    bool sdprinting= options.find_first_of("Bb") != string::npos;
+
+    if(!playing_file && current_file_handler != NULL) {
+        if(sdprinting)
+            return 0; // playing
+        else
+            return 1; // paused
+    } else if(!playing_file) {
+        return 2; // not playing
+    }
+    return 3;
+}
+
 void Player::abort_command( string parameters, StreamOutput *stream )
 {
     if(!playing_file && current_file_handler == NULL) {

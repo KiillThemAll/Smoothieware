@@ -61,6 +61,8 @@
 
 #include "mbed.h"
 
+#include "libs/Network/uip/ray/ray.h"
+
 #define second_usb_serial_enable_checksum  CHECKSUM("second_usb_serial_enable")
 #define disable_msd_checksum  CHECKSUM("msd_disable")
 #define dfu_enable_checksum  CHECKSUM("dfu_enable")
@@ -129,7 +131,8 @@ void init() {
 #endif
 
     // Create and add main modules
-    kernel->add_module( new(AHB0) Player() );
+    Player *player = new(AHB0) Player();
+    kernel->add_module( player );
 
     kernel->add_module( new(AHB0) CurrentControl() );
     kernel->add_module( new(AHB0) KillButton() );
@@ -178,7 +181,11 @@ void init() {
     kernel->add_module( new(AHB0) RotaryDeltaCalibration() );
     #endif
     #ifndef NONETWORK
-    kernel->add_module( new Network() );
+    Network *net = new Network();
+    kernel->add_module( net );
+
+    net->ray->setRobot(kernel->robot);
+    net->ray->setPlayer(player);
     #endif
     #ifndef NO_TOOLS_TEMPERATURESWITCH
     // Must be loaded after TemperatureControl

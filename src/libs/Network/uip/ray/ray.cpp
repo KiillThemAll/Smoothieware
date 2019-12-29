@@ -13,14 +13,27 @@
 #include <string.h>
 #include <stdio.h>
 
+#include "Robot.h"
+#include "Player.h"
+#include "StepperMotor.h"
+
 #define ipv4_header ((struct uip_tcpip_hdr *)&uip_buf[UIP_LLH_LEN])
 
 extern void resource_setup(const coap_resource_t *resources);
 extern coap_resource_t resources[];
 
 Ray::Ray() :
-        m_notifications_enabled(false)
+        m_notifications_enabled(false),
+        m_robot(0),
+        m_player(0)
 {
+    m_payload.mcs_x = 0.0;
+    m_payload.mcs_y = 0.0;
+    m_payload.mcs_z = 0.0;
+    m_payload.mcs_b = 0.0;
+    m_payload.state = 5;
+    m_payload.played = 0;
+    m_payload.total = 0;
 }
 Ray::~Ray() {}
 
@@ -108,17 +121,42 @@ void Ray::appcall()
         uip_udp_conn->ripaddr[1] = ipv4_header->srcipaddr[1];
         uip_udp_conn->rport = ipv4_header->srcport;
         uip_udp_send(len);*/
-    } else if (m_notifications_enabled) {
-        uint8_t buf[64];
-        sprintf((char *)buf, "counter: %d\n", i);
-        uint32_t len = strlen((const char *)buf);
-        memcpy(uip_appdata, buf, len);
+    } //else if (m_notifications_enabled) {
+        //uint8_t buf[64];
+        //sprintf((char *)buf, "counter: %d\n", i);
+        //uint32_t len = strlen((const char *)buf);
+        if (m_robot) {
+            m_payload.mcs_x = m_robot->actuators[X_AXIS]->get_current_position();
+            m_payload.mcs_y = m_robot->actuators[Y_AXIS]->get_current_position();
+            m_payload.mcs_z = m_robot->actuators[Z_AXIS]->get_current_position();
+            m_payload.mcs_b = m_robot->actuators[B_AXIS]->get_current_position();
+        }
+
+        if (m_player) {
+            m_payload.state = m_player->state();
+            m_payload.played = (uint32_t)m_player->played_cnt;
+            m_payload.total = (uint32_t)m_player->file_size;
+        }
+
+        memcpy(uip_appdata, (void *)&m_payload, sizeof(ray_payload_t));
 
         // switch to tx conn and send
         uip_udp_conn = m_udp_txonly;
-        uip_udp_conn->ripaddr[0] = m_notify_remote_ip[0];
-        uip_udp_conn->ripaddr[1] = m_notify_remote_ip[1];
-        uip_udp_conn->rport = m_notify_remote_port;
-        uip_udp_send(len);
-    }
+        uip_ipaddr_t addr;
+        uip_ipaddr(&addr, 192, 168, 88, 240);
+        uip_udp_conn->ripaddr[0] = addr[0];
+        uip_udp_conn->ripaddr[1] = addr[1];
+        uip_udp_conn->rport = HTONS(45454);
+        uip_udp_send(sizeof(ray_payload_t));
+    //}
+}
+
+void Ray::setRobot(Robot *robot)
+{
+    m_robot = robot;
+}
+
+void Ray::setPlayer(Player *player)
+{
+    m_player = player;
 }

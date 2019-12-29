@@ -403,7 +403,7 @@ void Network::init(void)
     timer_set(&arp_timer, CLOCK_SECOND * 10);   /* 10s */
 
 #ifndef NORAY
-    timer_set(&ray_timer, CLOCK_SECOND / 50); // 20ms
+    timer_set(&ray_timer, CLOCK_SECOND / 20); // 50ms
 #endif
 
     // Initialize the uIP TCP/IP stack.
